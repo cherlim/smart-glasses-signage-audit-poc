@@ -1,0 +1,197 @@
+{
+  "Good signage": [
+    {
+      "sign_id": "S1",
+      "node": "E",
+      "text": "Clinic, Lift, Toilet \u2192",
+      "directional": true,
+      "bbox_area": 0.18,
+      "visible_seconds": 4.5,
+      "ocr_confidence": 0.96,
+      "occlusion": 0.05,
+      "contrast": 0.9
+    },
+    {
+      "sign_id": "S2",
+      "node": "J1",
+      "text": "Clinic \u2190",
+      "directional": true,
+      "bbox_area": 0.15,
+      "visible_seconds": 3.2,
+      "ocr_confidence": 0.94,
+      "occlusion": 0.03,
+      "contrast": 0.88
+    },
+    {
+      "sign_id": "S3",
+      "node": "J1",
+      "text": "Lift \u2192",
+      "directional": true,
+      "bbox_area": 0.16,
+      "visible_seconds": 3.8,
+      "ocr_confidence": 0.95,
+      "occlusion": 0.02,
+      "contrast": 0.91
+    },
+    {
+      "sign_id": "S4",
+      "node": "J1",
+      "text": "Toilet \u2191",
+      "directional": true,
+      "bbox_area": 0.14,
+      "visible_seconds": 3.1,
+      "ocr_confidence": 0.92,
+      "occlusion": 0.06,
+      "contrast": 0.86
+    }
+  ],
+  "Poor visibility": [
+    {
+      "sign_id": "S1",
+      "node": "E",
+      "text": "Clinic, Lift, Toilet \u2192",
+      "directional": true,
+      "bbox_area": 0.08,
+      "visible_seconds": 2.0,
+      "ocr_confidence": 0.72,
+      "occlusion": 0.2,
+      "contrast": 0.55
+    },
+    {
+      "sign_id": "S2",
+      "node": "J1",
+      "text": "Clinic \u2190",
+      "directional": true,
+      "bbox_area": 0.05,
+      "visible_seconds": 1.2,
+      "ocr_confidence": 0.48,
+      "occlusion": 0.4,
+      "contrast": 0.42
+    },
+    {
+      "sign_id": "S3",
+      "node": "J1",
+      "text": "Lift \u2192",
+      "directional": true,
+      "bbox_area": 0.07,
+      "visible_seconds": 1.7,
+      "ocr_confidence": 0.61,
+      "occlusion": 0.25,
+      "contrast": 0.5
+    },
+    {
+      "sign_id": "S4",
+      "node": "J1",
+      "text": "Toilet \u2191",
+      "directional": true,
+      "bbox_area": 0.06,
+      "visible_seconds": 1.1,
+      "ocr_confidence": 0.52,
+      "occlusion": 0.35,
+      "contrast": 0.45
+    }
+  ],
+  "Missing clinic sign": [
+    {
+      "sign_id": "S1",
+      "node": "E",
+      "text": "Lift, Toilet \u2192",
+      "directional": true,
+      "bbox_area": 0.16,
+      "visible_seconds": 4.0,
+      "ocr_confidence": 0.93,
+      "occlusion": 0.05,
+      "contrast": 0.85
+    },
+    {
+      "sign_id": "S3",
+      "node": "J1",
+      "text": "Lift \u2192",
+      "directional": true,
+      "bbox_area": 0.15,
+      "visible_seconds": 3.5,
+      "ocr_confidence": 0.95,
+      "occlusion": 0.02,
+      "contrast": 0.91
+    },
+    {
+      "sign_id": "S4",
+      "node": "J1",
+      "text": "Toilet \u2191",
+      "directional": true,
+      "bbox_area": 0.14,
+      "visible_seconds": 3.0,
+      "ocr_confidence": 0.92,
+      "occlusion": 0.04,
+      "contrast": 0.88
+    }
+  ],
+  "Cluttered signage": [
+    {
+      "sign_id": "S1",
+      "node": "E",
+      "text": "Clinic, Lift, Toilet, Pharmacy, Lab, Billing \u2192",
+      "directional": true,
+      "bbox_area": 0.18,
+      "visible_seconds": 4.2,
+      "ocr_confidence": 0.83,
+      "occlusion": 0.08,
+      "contrast": 0.78
+    },
+    {
+      "sign_id": "S2",
+      "node": "J1",
+      "text": "Clinic \u2190",
+      "directional": true,
+      "bbox_area": 0.13,
+      "visible_seconds": 2.7,
+      "ocr_confidence": 0.86,
+      "occlusion": 0.1,
+      "contrast": 0.76
+    },
+    {
+      "sign_id": "S3",
+      "node": "J1",
+      "text": "Lift \u2192",
+      "directional": true,
+      "bbox_area": 0.13,
+      "visible_seconds": 2.8,
+      "ocr_confidence": 0.88,
+      "occlusion": 0.08,
+      "contrast": 0.78
+    },
+    {
+      "sign_id": "S4",
+      "node": "J1",
+      "text": "Toilet \u2191",
+      "directional": true,
+      "bbox_area": 0.12,
+      "visible_seconds": 2.6,
+      "ocr_confidence": 0.84,
+      "occlusion": 0.09,
+      "contrast": 0.75
+    },
+    {
+      "sign_id": "S5",
+      "node": "J1",
+      "text": "Pharmacy \u2193",
+      "directional": true,
+      "bbox_area": 0.1,
+      "visible_seconds": 2.1,
+      "ocr_confidence": 0.78,
+      "occlusion": 0.15,
+      "contrast": 0.7
+    },
+    {
+      "sign_id": "S6",
+      "node": "J1",
+      "text": "Billing \u2192",
+      "directional": true,
+      "bbox_area": 0.1,
+      "visible_seconds": 2.0,
+      "ocr_confidence": 0.76,
+      "occlusion": 0.16,
+      "contrast": 0.68
+    }
+  ]
+}

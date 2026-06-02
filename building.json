@@ -1,0 +1,110 @@
+{
+  "project": "Smart Glasses Signage Auditing POC",
+  "description": "Synthetic indoor environment for testing wayfinding signage audit metrics.",
+  "nodes": [
+    {
+      "id": "E",
+      "name": "Entrance",
+      "type": "entrance",
+      "is_decision_point": true
+    },
+    {
+      "id": "C1",
+      "name": "Main Corridor",
+      "type": "corridor",
+      "is_decision_point": false
+    },
+    {
+      "id": "J1",
+      "name": "Junction 1",
+      "type": "junction",
+      "is_decision_point": true
+    },
+    {
+      "id": "L",
+      "name": "Lift Lobby",
+      "type": "lift",
+      "is_decision_point": true
+    },
+    {
+      "id": "CL",
+      "name": "Clinic",
+      "type": "destination",
+      "is_decision_point": false
+    },
+    {
+      "id": "T",
+      "name": "Toilet",
+      "type": "destination",
+      "is_decision_point": false
+    }
+  ],
+  "edges": [
+    {
+      "from": "E",
+      "to": "C1",
+      "distance_m": 12
+    },
+    {
+      "from": "C1",
+      "to": "J1",
+      "distance_m": 18
+    },
+    {
+      "from": "J1",
+      "to": "L",
+      "distance_m": 8
+    },
+    {
+      "from": "J1",
+      "to": "CL",
+      "distance_m": 14
+    },
+    {
+      "from": "J1",
+      "to": "T",
+      "distance_m": 10
+    }
+  ],
+  "routes": [
+    {
+      "id": "R1",
+      "name": "Entrance to Clinic",
+      "path": [
+        "E",
+        "C1",
+        "J1",
+        "CL"
+      ],
+      "expected_destinations": [
+        "Clinic"
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "Entrance to Lift",
+      "path": [
+        "E",
+        "C1",
+        "J1",
+        "L"
+      ],
+      "expected_destinations": [
+        "Lift Lobby"
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "Entrance to Toilet",
+      "path": [
+        "E",
+        "C1",
+        "J1",
+        "T"
+      ],
+      "expected_destinations": [
+        "Toilet"
+      ]
+    }
+  ]
+}
