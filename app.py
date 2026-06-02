@@ -191,50 +191,59 @@ def recommendation_for_sign(row):
 def get_node_row(node_metrics, node_id):
     return node_metrics[node_metrics["node"] == node_id].iloc[0]
 
-def node_button_label(node_metrics, node_id):
+def node_label(node_metrics, node_id, selected_route_nodes):
     r = get_node_row(node_metrics, node_id)
-    icon = risk_icon(r["risk"])
-    return f'{icon} {r["name"]}'
+    star = "⭐ " if node_id in selected_route_nodes else ""
+    return f'{star}{risk_icon(r["risk"])} {r["name"]}'
 
 def click_node(node_id):
     st.session_state["selected_node"] = node_id
 
+def node_button(node_metrics, node_id, selected_route_nodes, key_suffix=""):
+    label = node_label(node_metrics, node_id, selected_route_nodes)
+    st.button(label, key=f"node_{node_id}_{key_suffix}", on_click=click_node, args=(node_id,), use_container_width=True)
+
+def branch_arrow(node_id, selected_route_nodes):
+    if node_id in selected_route_nodes:
+        return "➡️"
+    return "↘"
+
 def render_clickable_graph(node_metrics, selected_route_nodes):
     st.markdown("#### Clickable Wayfinding Heat Map")
-    st.caption("Click a location to inspect node-level metrics. Nodes on the selected route are marked with ⭐.")
+    st.caption("Click a location to inspect node-level metrics. ⭐ marks the selected route. The selected branch after Junction 1 is shown explicitly.")
 
-    row1 = st.columns([1.1, 0.25, 1.1, 0.25, 1.1])
+    # Main route spine: Entrance -> Corridor -> Junction
+    row1 = st.columns([1.05, 0.18, 1.05, 0.18, 1.05])
     with row1[0]:
-        label = node_button_label(node_metrics, "E")
-        if "E" in selected_route_nodes:
-            label = "⭐ " + label
-        st.button(label, key="node_E", on_click=click_node, args=("E",), use_container_width=True)
+        node_button(node_metrics, "E", selected_route_nodes, "top")
     with row1[1]:
-        st.markdown("<h2 style='text-align:center;'>→</h2>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center;'>➡️</h3>", unsafe_allow_html=True)
     with row1[2]:
-        label = node_button_label(node_metrics, "C1")
-        if "C1" in selected_route_nodes:
-            label = "⭐ " + label
-        st.button(label, key="node_C1", on_click=click_node, args=("C1",), use_container_width=True)
+        node_button(node_metrics, "C1", selected_route_nodes, "top")
     with row1[3]:
-        st.markdown("<h2 style='text-align:center;'>→</h2>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center;'>➡️</h3>", unsafe_allow_html=True)
     with row1[4]:
-        label = node_button_label(node_metrics, "J1")
-        if "J1" in selected_route_nodes:
-            label = "⭐ " + label
-        st.button(label, key="node_J1", on_click=click_node, args=("J1",), use_container_width=True)
+        node_button(node_metrics, "J1", selected_route_nodes, "top")
 
-    st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+    # Branch connectors
+    row2 = st.columns([1.05, 0.18, 1.05, 0.18, 1.05])
+    with row2[0]:
+        st.markdown(f"<h3 style='text-align:center;color:gray;'>{branch_arrow('L', selected_route_nodes)}</h3>", unsafe_allow_html=True)
+    with row2[2]:
+        st.markdown(f"<h3 style='text-align:center;color:gray;'>{branch_arrow('CL', selected_route_nodes)}</h3>", unsafe_allow_html=True)
+    with row2[4]:
+        st.markdown(f"<h3 style='text-align:center;color:gray;'>{branch_arrow('T', selected_route_nodes)}</h3>", unsafe_allow_html=True)
 
-    row2 = st.columns([1.1, 1.1, 1.1])
-    for col, node_id in zip(row2, ["L", "CL", "T"]):
-        with col:
-            label = node_button_label(node_metrics, node_id)
-            if node_id in selected_route_nodes:
-                label = "⭐ " + label
-            st.button(label, key=f"node_{node_id}", on_click=click_node, args=(node_id,), use_container_width=True)
+    # Destination branches
+    row3 = st.columns([1.05, 0.18, 1.05, 0.18, 1.05])
+    with row3[0]:
+        node_button(node_metrics, "L", selected_route_nodes, "bottom")
+    with row3[2]:
+        node_button(node_metrics, "CL", selected_route_nodes, "bottom")
+    with row3[4]:
+        node_button(node_metrics, "T", selected_route_nodes, "bottom")
 
-    st.caption("Legend: 🟢 Low risk / good signage · 🟡 medium risk · 🔴 high risk or poor signage · ⭐ selected route")
+    st.caption("Legend: 🟢 low risk / good signage · 🟡 medium risk · 🔴 high risk or poor signage · ⭐ selected route")
 
 def selected_node_detail_panel(building, df, node_metrics, node_id):
     node_row = get_node_row(node_metrics, node_id)
@@ -307,8 +316,14 @@ node_metrics = compute_node_metrics(building, df, selected_route_id)
 
 selected_route_nodes = set(get_route(building, selected_route_id)["path"])
 
+# Reset selected node to destination when route changes.
+current_route = st.session_state.get("current_route")
+if current_route != selected_route_id:
+    st.session_state["current_route"] = selected_route_id
+    st.session_state["selected_node"] = get_route(building, selected_route_id)["path"][-1]
+
 if "selected_node" not in st.session_state:
-    st.session_state["selected_node"] = "J1"
+    st.session_state["selected_node"] = get_route(building, selected_route_id)["path"][-1]
 
 with right:
     st.subheader("Route Audit Summary")
@@ -367,7 +382,8 @@ This dashboard uses simulated smart-glasses observations. The clickable heat map
 - each button is a location node
 - colour icons indicate signage/wayfinding risk
 - ⭐ marks nodes on the selected route
+- arrows show the continuing branch after Junction 1
 - clicking a node shows sign quality, effective coverage, critical sign, and recommendations
 
-This version keeps the graph compact and moves detailed metrics into the inspection panel.
+This version keeps the graph compact and makes route continuity explicit.
 """)
