@@ -44,13 +44,6 @@ def risk_label(score):
 def risk_icon(risk):
     return {"Low": "🟢", "Medium": "🟡", "High": "🔴"}.get(risk, "⚪")
 
-def quality_colour(score):
-    if score >= 80:
-        return "palegreen"
-    if score >= 60:
-        return "khaki"
-    return "lightcoral"
-
 def prepare_sign_dataframe(signs):
     df = pd.DataFrame(signs)
     if df.empty:
@@ -61,6 +54,9 @@ def prepare_sign_dataframe(signs):
     df["status"] = df["quality_score"].apply(status)
     return df
 
+def get_route(building, route_id):
+    return next(r for r in building["routes"] if r["id"] == route_id)
+
 def route_distance(building, route_path):
     distance = 0
     for a, b in zip(route_path, route_path[1:]):
@@ -69,16 +65,10 @@ def route_distance(building, route_path):
                 distance += e["distance_m"]
     return distance
 
-def get_route(building, route_id):
-    return next(r for r in building["routes"] if r["id"] == route_id)
-
 def audit_route(building, df, selected_route_id):
     route = get_route(building, selected_route_id)
     route_nodes = set(route["path"])
     expected_terms = [d.lower() for d in route["expected_destinations"]]
-
-    if df.empty:
-        return df, {}
 
     df = df.copy()
     df["on_route"] = df["node"].isin(route_nodes)
@@ -108,7 +98,6 @@ def audit_route(building, df, selected_route_id):
         + (5 * max(decision_point_count - 2, 0))
     )
 
-    # Convert risk score into label. High numeric confusion risk means worse condition.
     if confusion_risk_score >= 65:
         confusion_risk = "High"
     elif confusion_risk_score >= 40:
@@ -155,11 +144,7 @@ def compute_node_metrics(building, df, selected_route_id):
         else:
             edc = None
 
-        if node["is_decision_point"]:
-            risk_base = sq
-        else:
-            risk_base = sq if len(node_signs) else 85
-
+        risk_base = sq if node["is_decision_point"] or len(node_signs) else 85
         risk = risk_label(risk_base)
 
         rows.append({
@@ -203,52 +188,110 @@ def recommendation_for_sign(row):
 
     return issues, recommendations
 
-def build_graphviz(building, node_metrics, selected_route_id):
-    route = get_route(building, selected_route_id)
-    route_edges = set()
-    for a, b in zip(route["path"], route["path"][1:]):
-        route_edges.add(tuple(sorted([a, b])))
+def get_node_row(node_metrics, node_id):
+    return node_metrics[node_metrics["node"] == node_id].iloc[0]
 
-    metric_lookup = node_metrics.set_index("node").to_dict(orient="index")
+def node_button_label(node_metrics, node_id):
+    r = get_node_row(node_metrics, node_id)
+    icon = risk_icon(r["risk"])
+    return f'{icon} {r["name"]}'
 
-    lines = []
-    lines.append("graph G {")
-    lines.append('  graph [rankdir=TB, bgcolor="transparent", splines=true, nodesep=0.65, ranksep=0.8];')
-    lines.append('  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=12, margin=0.12];')
-    lines.append('  edge [fontname="Helvetica", fontsize=10, color="gray55"];')
+def click_node(node_id):
+    st.session_state["selected_node"] = node_id
 
-    for node in building["nodes"]:
-        node_id = node["id"]
-        m = metric_lookup[node_id]
-        sq = m["sign_quality"]
-        risk = m["risk"]
-        colour = quality_colour(sq)
-        penwidth = "3" if m["on_route"] else "1"
-        border = "black" if m["on_route"] else "gray70"
-        edc_text = "EDC: n/a" if m["effective_decision_coverage"] is None else f'EDC: {m["effective_decision_coverage"]}%'
-        label = f'{node["name"]}\\nSQ: {sq}\\n{edc_text}\\nRisk: {risk}'
-        lines.append(f'  {node_id} [label="{label}", fillcolor="{colour}", color="{border}", penwidth={penwidth}];')
+def render_clickable_graph(node_metrics, selected_route_nodes):
+    st.markdown("#### Clickable Wayfinding Heat Map")
+    st.caption("Click a location to inspect node-level metrics. Nodes on the selected route are marked with ⭐.")
 
-    for e in building["edges"]:
-        a, b = e["from"], e["to"]
-        key = tuple(sorted([a, b]))
-        if key in route_edges:
-            color = "black"
-            penwidth = "3"
+    row1 = st.columns([1.1, 0.25, 1.1, 0.25, 1.1])
+    with row1[0]:
+        label = node_button_label(node_metrics, "E")
+        if "E" in selected_route_nodes:
+            label = "⭐ " + label
+        st.button(label, key="node_E", on_click=click_node, args=("E",), use_container_width=True)
+    with row1[1]:
+        st.markdown("<h2 style='text-align:center;'>→</h2>", unsafe_allow_html=True)
+    with row1[2]:
+        label = node_button_label(node_metrics, "C1")
+        if "C1" in selected_route_nodes:
+            label = "⭐ " + label
+        st.button(label, key="node_C1", on_click=click_node, args=("C1",), use_container_width=True)
+    with row1[3]:
+        st.markdown("<h2 style='text-align:center;'>→</h2>", unsafe_allow_html=True)
+    with row1[4]:
+        label = node_button_label(node_metrics, "J1")
+        if "J1" in selected_route_nodes:
+            label = "⭐ " + label
+        st.button(label, key="node_J1", on_click=click_node, args=("J1",), use_container_width=True)
+
+    st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+
+    row2 = st.columns([1.1, 1.1, 1.1])
+    for col, node_id in zip(row2, ["L", "CL", "T"]):
+        with col:
+            label = node_button_label(node_metrics, node_id)
+            if node_id in selected_route_nodes:
+                label = "⭐ " + label
+            st.button(label, key=f"node_{node_id}", on_click=click_node, args=(node_id,), use_container_width=True)
+
+    st.caption("Legend: 🟢 Low risk / good signage · 🟡 medium risk · 🔴 high risk or poor signage · ⭐ selected route")
+
+def selected_node_detail_panel(building, df, node_metrics, node_id):
+    node_row = get_node_row(node_metrics, node_id)
+    node_signs = df[df["node"] == node_id].copy()
+
+    st.markdown(f"### Selected Node: {node_row['name']}")
+    st.write(f"Type: **{node_row['type']}**")
+    st.write(f"On selected route: **{'Yes' if node_row['on_route'] else 'No'}**")
+    st.write(f"Decision point: **{'Yes' if node_row['is_decision_point'] else 'No'}**")
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Sign Quality", node_row["sign_quality"])
+    if pd.isna(node_row["effective_decision_coverage"]):
+        c2.metric("Effective Coverage", "n/a")
+    else:
+        c2.metric("Effective Coverage", f'{node_row["effective_decision_coverage"]}%')
+    c3.metric("Risk", f'{risk_icon(node_row["risk"])} {node_row["risk"]}')
+
+    if len(node_signs):
+        critical_sign = node_signs.sort_values("quality_score").iloc[0]
+        issues, recommendations = recommendation_for_sign(critical_sign)
+
+        st.markdown("#### Critical Sign at This Node")
+        st.write(f"**{critical_sign['sign_id']} — {critical_sign['text']}**")
+        st.write(f"Quality score: **{critical_sign['quality_score']}** | Status: **{critical_sign['status']}**")
+
+        st.markdown("#### Recommendations")
+        for rec in recommendations:
+            st.write(f"- {rec}")
+
+        st.caption("Detected issue basis: " + ", ".join(issues))
+
+        with st.expander("Show signs at this node"):
+            st.dataframe(
+                node_signs[[
+                    "sign_id", "text", "visibility_score", "readability_score",
+                    "quality_score", "status", "visible_seconds", "ocr_confidence",
+                    "contrast", "occlusion"
+                ]],
+                use_container_width=True
+            )
+    else:
+        if node_row["is_decision_point"]:
+            st.error("No sign is detected at this decision point.")
+            st.write("- Add clear directional signage at this location.")
+            st.write("- Ensure the sign is visible before the user reaches the decision point.")
         else:
-            color = "gray70"
-            penwidth = "1"
-        lines.append(f'  {a} -- {b} [label="{e["distance_m"]}m", color="{color}", penwidth={penwidth}];')
+            st.info("No signage issue detected for this non-decision point.")
 
-    lines.append("}")
-    return "\n".join(lines)
+# ---------- Streamlit App ----------
 
 st.set_page_config(page_title="Smart Glasses Signage Audit POC", layout="wide")
 
 building, scenarios = load_data()
 
 st.title("Smart Glasses Signage Audit POC")
-st.caption("Synthetic building + simulated smart-glasses observations + graph-based signage audit metrics.")
+st.caption("Synthetic building + simulated smart-glasses observations + clickable wayfinding heat map.")
 
 left, right = st.columns([1, 2])
 
@@ -262,6 +305,11 @@ df = prepare_sign_dataframe(scenarios[scenario_name])
 df, metrics = audit_route(building, df, selected_route_id)
 node_metrics = compute_node_metrics(building, df, selected_route_id)
 
+selected_route_nodes = set(get_route(building, selected_route_id)["path"])
+
+if "selected_node" not in st.session_state:
+    st.session_state["selected_node"] = "J1"
+
 with right:
     st.subheader("Route Audit Summary")
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -273,59 +321,25 @@ with right:
 
 st.divider()
 
-st.subheader("Visual Building Graph with Signage Metrics")
-st.caption("SQ = Sign Quality. EDC = Effective Decision Coverage. Thick black edges show the selected route.")
-dot = build_graphviz(building, node_metrics, selected_route_id)
-st.graphviz_chart(dot, use_container_width=True)
+graph_col, detail_col = st.columns([1.25, 1])
 
-route_nodes = set(get_route(building, selected_route_id)["path"])
-route_node_metrics = node_metrics[node_metrics["on_route"]].copy()
-critical_node = route_node_metrics.sort_values("sign_quality").iloc[0]
+with graph_col:
+    render_clickable_graph(node_metrics, selected_route_nodes)
 
-route_signs = df[df["on_route"]].copy()
-if len(route_signs):
-    critical_sign = route_signs.sort_values("quality_score").iloc[0]
-    issues, recommendations = recommendation_for_sign(critical_sign)
-else:
-    critical_sign = None
-    issues, recommendations = [], ["Add wayfinding signage along this route."]
-
-st.subheader("Key Findings")
-k1, k2, k3 = st.columns(3)
-
-with k1:
-    st.markdown("### Critical Node")
-    st.write(f"**{critical_node['name']}**")
-    st.write(f"Sign quality: **{critical_node['sign_quality']}**")
-    st.write(f"Risk: **{risk_icon(critical_node['risk'])} {critical_node['risk']}**")
-
-with k2:
-    st.markdown("### Critical Sign")
-    if critical_sign is not None:
-        st.write(f"**{critical_sign['sign_id']} — {critical_sign['text']}**")
-        st.write(f"Quality score: **{critical_sign['quality_score']}**")
-        st.write(f"Status: **{critical_sign['status']}**")
-    else:
-        st.write("No sign detected on route.")
-
-with k3:
-    st.markdown("### Route Interpretation")
-    if metrics["Destination guidance found"] == "No":
-        st.error("Destination-specific guidance is missing or not detected.")
-    elif metrics["Confusion risk"] == "High":
-        st.error("This route has high potential confusion risk.")
-    elif metrics["Confusion risk"] == "Medium":
-        st.warning("This route may require signage improvement.")
-    else:
-        st.success("This route appears relatively well supported.")
-
-st.subheader("Recommendations")
-for rec in recommendations:
-    st.write(f"- {rec}")
-if issues:
-    st.caption("Detected issue basis: " + ", ".join(issues))
+with detail_col:
+    selected_node_detail_panel(building, df, node_metrics, st.session_state["selected_node"])
 
 st.divider()
+
+st.subheader("Route-Level Interpretation")
+if metrics["Destination guidance found"] == "No":
+    st.error("Destination-specific guidance is missing or not detected on this route.")
+elif metrics["Confusion risk"] == "High":
+    st.error("This route has high potential confusion risk.")
+elif metrics["Confusion risk"] == "Medium":
+    st.warning("This route may require signage improvement.")
+else:
+    st.success("This route appears relatively well supported.")
 
 st.subheader("Node-Level Audit Metrics")
 st.dataframe(
@@ -348,13 +362,12 @@ st.dataframe(df[display_cols], use_container_width=True)
 
 st.subheader("POC Logic")
 st.markdown("""
-This dashboard still uses simulated smart-glasses observations. The graph now acts as a wayfinding audit map:
+This dashboard uses simulated smart-glasses observations. The clickable heat map represents the building as a route network:
 
-- each node represents a location in the building
-- node colour shows signage quality
-- the selected route is highlighted
-- each node displays sign quality, effective decision coverage, and confusion risk
-- the dashboard identifies the weakest node and weakest sign, then generates recommendations
+- each button is a location node
+- colour icons indicate signage/wayfinding risk
+- ⭐ marks nodes on the selected route
+- clicking a node shows sign quality, effective coverage, critical sign, and recommendations
 
-This is a mockup of the audit framework before adding real video and OCR.
+This version keeps the graph compact and moves detailed metrics into the inspection panel.
 """)
